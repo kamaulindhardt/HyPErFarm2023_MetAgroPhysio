@@ -1,0 +1,306 @@
+---
+title: "Figures for Nature Paper"
+author: "Johannes Wilhelmus Maria Pullens"
+date: "2024"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r setup, include=FALSE}
+# Clear the workspace and load required libraries
+rm(list = ls())
+
+library(ggplot2) # Version 3.5.1
+library(tidyverse) # Version 2.0.0
+library(readxl) # Version 1.4.3
+library(lme4) # Version 1.1-35.3
+library(emmeans) # Version 1.10.2
+
+base_sizeJP <- 16
+```
+
+```{r}
+# Load the Yield data from an Excel file
+Yield <- readxl::read_excel("DATA/CROP_YIELD/Yield_2023.xlsx", sheet = "all")
+
+# Define the plots to exclude from the dataset and remove them
+N <- c("N1","N2","N3","N4","N5","N6","N25","N26","N27","N28","N29","N30")
+S <- c("S31","S32","S33","S34","S35","S36","S55","S56","S57","S58","S59","S60")
+Yield <- Yield[-which(Yield$Plot %in% N), ]
+Yield <- Yield[-which(Yield$Plot %in% S), ]
+
+```
+
+```{r}
+# Convert columns to appropriate data types
+Yield$PV_setup <- as.factor(Yield$PV_setup)
+Yield$Location <- as.factor(Yield$Location)
+Yield$Product <- as.factor(Yield$Product)
+Yield$Dry_Weight_1ha <- as.numeric(Yield$Dry_Weight_1ha)
+Yield$Side <- as.factor(Yield$Side)
+Yield$Side <- factor(Yield$Side, levels = c("W", "Mid", "E", "S", "M", "N"))
+
+```
+
+```{r}
+# Fit a linear mixed-effects model
+LM <- lmer(Dry_Weight_1ha ~ PV_setup * Location * Product + (1 | Plot), data = Yield)
+```
+
+Data Preprocessing and Updating PV Setup Column
+
+```{r}
+# Remove 'Lupin' product from the dataset
+Yield <- Yield[-which(Yield$Product == "Lupin"), ]
+```
+
+```{r}
+# Update the PV_setup column based on the Location
+Yield$PV_setup <- as.character(Yield$PV_setup)
+Yield$PV_setup[which(Yield$Location == "Out")] <- "Reference"
+Yield$PV_setup <- as.factor(Yield$PV_setup)
+```
+
+```{r}
+# Rename levels of PV_setup for clarity
+levels(Yield$PV_setup) <- c("Vertical", "Tilted south-oriented", "Open field")
+```
+
+
+Fit Linear Model for Updated Dataset
+
+```{r}
+# Fit a linear model for the updated dataset
+LM <- lm(Dry_Weight_1ha ~ PV_setup * Product, data = Yield)
+```
+
+Compute Estimated Marginal Means
+
+```{r}
+# Compute and plot estimated marginal means for the new model
+emm <- emmeans(LM, list(pairwise ~ PV_setup * Product), adjust = "tukey")
+```
+
+Data Preparation for Visualization
+
+```{r}
+# Rename columns in the Yield dataset for clarity
+names(Yield) <- c("PV Setup", "Location", "Product", "Plot", "Dry weight (t/ha)")
+
+# Reorder the Product factor levels for better visualization
+Yield$Product <- factor(Yield$Product, levels = c("Grain", "Straw", "Grass-Clover"))
+```
+
+Create Boxplot for Yield Data
+
+```{r}
+# Function for formatting y-axis labels
+scaleFUN <- function(x) sprintf("%.1f", x)
+
+# Create a boxplot for the entire dataset
+Allplot <- ggplot(data = Yield, aes(x = Product, y = `Dry weight (t/ha)`)) +
+  geom_boxplot(aes(fill = `PV Setup`)) + 
+  scale_fill_manual(values = c("#F98D06", "#1A91FF", "green")) +
+  theme_bw(base_size = base_sizeJP) +
+  theme(legend.position = "bottom") + 
+  scale_y_continuous(limits = c(2, 7), labels = scaleFUN)
+
+Allplot
+```
+
+
+Annotate Grass-Clover Data
+
+```{r}
+# Define data frames for Grass-Clover annotations
+grassclover <- data.frame(a = c(2.75, 2.75, 3, 3, 3), b = c(6.4, 6.5, 6.5, 6.5, 6.4))
+grassclover_1 <- data.frame(a = c(3, 3, 3.25, 3.25, 3.25), b = c(6.6, 6.7, 6.7, 6.7, 6.6))
+
+# Add lines and annotations to the plot
+Allplot <- Allplot + 
+  geom_line(data = grassclover, aes(x = a, y = b)) +
+  geom_line(data = grassclover_1, aes(x = a, y = b)) + 
+  annotate("text", x = c(2.875, 3.125), y = c(6.6, 6.8), label = "**", size = 7)
+
+Allplot
+```
+
+Load and Clean Grass Data for Further Analysis
+
+```{r}
+# Load the Grass data from the Excel file
+Grass <- read_excel("DATA/CROP_YIELD/Yield_2023.xlsx", sheet = "Grassclover")
+Grass <- subset(Grass, select = c("PV_setup", "Location", "Plot", "Dry_Weight_1ha, 03/07/2023", 
+                                  "Dry_Weight_1ha, 14/08/2023", "Dry_Weight_1ha, 21/09/2023"))
+
+# Remove specified plots from the dataset
+Grass <- Grass[-which(Grass$Plot %in% N), ]
+Grass <- Grass[-which(Grass$Plot %in% S), ]
+
+# Update PV_setup and Location columns
+Grass$PV_setup[which(Grass$Location == "Out")] <- "Reference"
+Grass$Location[which(Grass$Location == "Out")] <- "Reference"
+```
+
+Fit Linear Models for Each Grass Cut and Compute Estimated Marginal Means
+
+```{r}
+# First cut
+LM <- lm(`Dry_Weight_1ha, 03/07/2023` ~ PV_setup * Location, data = Grass)
+emmeans(LM, list(pairwise ~ PV_setup * Location), adjust = "tukey")
+
+# Second cut
+LM <- lm(`Dry_Weight_1ha, 14/08/2023` ~ PV_setup * Location, data = Grass)
+emmeans(LM, list(pairwise ~ PV_setup * Location), adjust = "tukey")
+
+# Third cut
+LM <- lm(`Dry_Weight_1ha, 21/09/2023` ~ PV_setup * Location, data = Grass)
+emmeans(LM, list(pairwise ~ PV_setup * Location), adjust = "tukey")
+```
+
+Reload and Reformat Grass Data for Further Plotting
+
+```{r}
+# Reload and reformat Grass data for further plotting
+Grass <- readxl::read_excel("DATA/CROP_YIELD/Yield_2023.xlsx", sheet = "Sheet1")
+names(Grass) <- c("PV_setup", "Location", "Product", "Plot", "Dry_Weight_1ha", "Date")
+Grass <- Grass[-which(Grass$Plot %in% N), ]
+Grass <- Grass[-which(Grass$Plot %in% S), ]
+```
+
+```{r}
+# Update PV_setup column and rename levels
+Grass$PV_setup <- as.character(Grass$PV_setup)
+Grass$PV_setup[which(Grass$Location == "Out")] <- "Reference"
+Grass$PV_setup <- as.factor(Grass$PV_setup)
+levels(Grass$PV_setup) <- c("Vertical", "Tilted south-oriented", "Open field")
+
+# Convert Date to factor and create subsets for each cut date
+Grass$Date <- factor(Grass$Date)
+a1 <- subset(Grass, Date == "2023-07-03")
+a2 <- subset(Grass, Date == "2023-08-14")
+a3 <- subset(Grass, Date == "2023-09-21")
+levels(a1$PV_setup) <- c("V", "T", "O")
+levels(a2$PV_setup) <- c("V", "T", "O")
+levels(a3$PV_setup) <- c("V", "T", "O")
+```
+
+Plot Grass Data for Each Cut
+
+```{r}
+# Plot for the first cut (July 3rd, 2023)
+grass_plot1 <- ggplot(data = a1, aes(x = PV_setup, y = Dry_Weight_1ha)) + 
+  geom_boxplot(aes(fill = PV_setup), show.legend = FALSE) + 
+  scale_fill_manual(values = c("#F98D06", "#1A91FF", "green")) + 
+  theme_bw(base_size = base_sizeJP) +  # Set base size for theme
+  labs(y = "Dry weight (t/ha)", x = "") +  # Label for y-axis and no label for x-axis
+  scale_x_discrete(labels = NULL) +  # Remove x-axis labels
+  ylim(1.5, 2.8) +  # Set y-axis limits
+  ggtitle("2023-07-03") +  # Title for the plot
+  theme(plot.title = element_text(hjust = 0.5))  # Center the plot title
+
+grass_plot1
+```
+
+```{r}
+# Plot for the second cut (August 14th, 2023)
+grass_plot2 <- ggplot(data = a2, aes(x = PV_setup, y = Dry_Weight_1ha)) + 
+  geom_boxplot(aes(fill = PV_setup), show.legend = FALSE) + 
+  scale_fill_manual(values = c("#F98D06", "#1A91FF", "green")) +  
+  theme_bw(base_size = base_sizeJP) +  # Set base size for theme
+  labs(y = "Dry weight (t/ha)", x = "") +  # Label for y-axis and no label for x-axis
+  scale_x_discrete(labels = NULL) +  # Remove x-axis labels
+  ylim(1.5, 2.8) +  # Set y-axis limits
+  ggtitle("2023-08-14") +  # Title for the plot
+  theme(plot.title = element_text(hjust = 0.5))  # Center the plot title
+
+grass_plot2
+```
+```{r}
+# Plot for the third cut (September 21st, 2023)
+grass_plot3 <- ggplot(data = a3, aes(x = PV_setup, y = Dry_Weight_1ha)) + 
+  geom_boxplot(aes(fill = PV_setup), show.legend = FALSE) + 
+  scale_fill_manual(values = c("#F98D06", "#1A91FF", "green")) + 
+  theme_bw(base_size = base_sizeJP) +  # Set base size for theme
+  labs(y = "Dry weight (t/ha)", x = "PV Setup") +  # Label for y-axis and x-axis
+  ylim(1.5, 2.8) +  # Set y-axis limits
+  ggtitle("2023-09-21") +  # Title for the plot
+  theme(plot.title = element_text(hjust = 0.5))  # Center the plot title
+
+grass_plot3
+```
+
+Add Annotations to the Second Cut Plot
+
+```{r}
+# Add lines and annotations to the second cut plot to indicate significance
+cut2 <- data.frame(a = c(1, 1, 2, 2, 2), b = c(2.45, 2.55, 2.55, 2.55, 2.45))
+cut2_1 <- data.frame(a = c(2, 2, 3, 3, 3), b = c(2.6, 2.7, 2.7, 2.7, 2.6))
+
+# Adding lines and asterisks to indicate significance between the setups
+grass_plot2 <- grass_plot2 + 
+  geom_line(data = cut2, aes(x = a, y = b)) + 
+  geom_line(data = cut2_1, aes(x = a, y = b)) +
+  annotate("text", x = c(1.5, 2.5), y = c(2.6, 2.75), label = "*", size = 7)
+```
+
+Arrange Grass Plots Vertically
+
+```{r}
+# Arrange the three grass plots vertically in one column
+right <- ggpubr::ggarrange(grass_plot1, grass_plot2, grass_plot3, ncol = 1, legend = FALSE, heights = 100)
+```
+Combine Overall Yield Plot with Grass Plots
+
+```{r}
+# Combine the overall yield plot (Allplot) with the arranged grass plots
+complete_graph <- ggpubr::ggarrange(
+  Allplot, right, 
+  labels = c("a", "b"), 
+  widths = c(3.5, 1.5), 
+  common.legend = FALSE, 
+  font.label = c(size = base_sizeJP + 1)
+)
+
+# Display the final combined graph
+complete_graph
+
+```
+Save the Combined Plot as a PDF
+
+```{r}
+# Save the combined plot to a PDF file
+pdf("arrangedplot_corrected04092024.pdf", width = 12, height = 7)
+print(complete_graph)
+dev.off()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,527 @@
+---
+title: "WINDROSE_HYPER_2023"
+author: "M.K.K. Lindhardt"
+date: "2024-09-25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##############################################################################################################################
+PREPARING SCRIPT
+##############################################################################################################################
+
+
+```{r}
+# Remove all objects
+rm(list = ls())
+```
+
+## Packages to be installed first
+
+```{r Installing the pacman package, warning=FALSE}
+# install.packages("pacman")
+library(pacman)
+```
+
+## Installing at loading packages and libraries needed
+
+```{r Loading other needed packages, warning=FALSE}
+# Suppress warnings while loading/installing packages
+suppressWarnings({
+  
+  # Load only necessary packages using pacman::p_load
+  pacman::p_load(
+    conflicted,    # Manage conflicts between packages
+    tidyverse,     # Data manipulation and visualization (includes dplyr, ggplot2, etc.)
+    janitor,       # Data cleaning (cleaning column names)
+    lubridate,     # Working with dates and times
+    readr,         # Reading data (e.g., CSV files)
+    readxl,        # Reading Excel data
+    ggpubr,        # Publication-ready plots
+    openair,       # Analyzing air quality and meteorological data
+    grid,          # Low-level graphics system
+    gridExtra,     # Arrange multiple plots
+    png,           # Reading PNG images
+    magick         # Image manipulation (used for combining and annotating images)
+  )
+
+  # Conditionally load other packages if specific functions are used
+  if ("fuzzyjoin" %in% ls()) pacman::p_load(fuzzyjoin)  # For fuzzy joining
+  if ("broom.mixed" %in% ls()) pacman::p_load(broom.mixed)  # For mixed model diagnostics
+  if ("ggplot2.windrose" %in% ls()) pacman::p_load(ggplot2.windrose)  # For windrose plots
+
+})
+
+###############################################################################################
+# Set preferences for conflicting functions
+
+conflict_prefer("locale", "readr")
+conflict_prefer("stamp", "lubridate")
+
+conflict_prefer("filter", "dplyr")
+conflict_prefer("group_by", "dplyr")
+conflict_prefer("summarise", "dplyr")
+conflict_prefer("mutate", "dplyr")
+conflict_prefer("rename", "dplyr")
+conflict_prefer("arrange", "dplyr")
+```
+
+
+################
+## STEP X
+##############################################################################################################################
+## REVIWEING CODE AND GRAPHS FOR FIGURES FOR COMMON PAPER aka 'MARTA PAPER'
+
+## MARYAM'S CODE - ADAPTED
+##############################################################################################################################
+
+########################################################################################
+IMPORT DATA
+########################################################################################
+
+```{r}
+# Control reference station
+control_wind_data <- read_csv("DATA/MICRO_MET/Control_WS_WD.csv")
+control_wind_data |>  glimpse()
+
+# South-oriented fixed-tilted 
+s_wind_data <- read_csv("DATA/MICRO_MET/South_oriented_WS_WD.csv")
+s_wind_data |>  glimpse()
+
+# Vertical
+v_wind_data <- read_csv("DATA/MICRO_MET/Vertical_WS_WD.csv")
+v_wind_data |>  glimpse()
+```
+
+########################################################################################
+PREPARING DATA - CLEAN AND RESHAPE DATA
+########################################################################################
+
+###################################################
+NOT RELEVANT HERE BUT
+On the 30th April 2024. nest 4 swapped with 5
+###################################################
+
+```{r}
+# Function to read and clean data
+read_and_clean_data <- function(data) {
+  data <- data %>%
+    filter(!is.na(Windspeed) & !is.na(Winddir) & Windspeed != "" & Winddir != "")
+  return(data)
+}
+
+# Read and clean each dataset
+control_wind_data <- read_and_clean_data(control_wind_data)
+s_wind_data <- read_and_clean_data(s_wind_data)
+v_wind_data <- read_and_clean_data(v_wind_data)
+```
+
+
+########################################################################################
+DATA EXPLORATION 
+########################################################################################
+
+```{r}
+# Function to summarize data
+summarize_data <- function(data, nest) {
+  summary <- data %>% 
+    dplyr::filter(Nest == nest) %>%
+    dplyr::summarize(
+      mean_WINDDIR = mean(Winddir, na.rm = TRUE),
+      sd_WINDDIR = sd(Winddir, na.rm = TRUE),
+      median_WINDDIR = median(Winddir, na.rm = TRUE),
+      mean_WINDSPEED = mean(Windspeed, na.rm = TRUE),
+      sd_WINDSPEED = sd(Windspeed, na.rm = TRUE),
+      median_WINDSPEED = median(Windspeed, na.rm = TRUE),
+      count = n(),
+      .groups = 'drop'
+    )
+  return(summary)
+}
+
+# Summarize each dataset for each nest
+control_summary <- summarize_data(control_wind_data, "0")
+
+s_summary_n1 <- summarize_data(s_wind_data, "1")
+s_summary_n2 <- summarize_data(s_wind_data, "2")
+s_summary_n5 <- summarize_data(s_wind_data, "5")
+
+v_summary_n3 <- summarize_data(v_wind_data, "3")
+v_summary_n4 <- summarize_data(v_wind_data, "4")
+v_summary_n6 <- summarize_data(v_wind_data, "6")
+
+# Print summaries
+cat("\nControl Summary:\n")
+print(control_summary)
+cat("\nSouth-oriented Fixed-tilted Summary N1:\n")
+print(s_summary_n1)
+cat("\nSouth-oriented Fixed-tilted Summary N2:\n")
+print(s_summary_n2)
+cat("\nSouth-oriented Fixed-tilted Summary N5:\n")
+print(s_summary_n5)
+cat("\nVertical Summary N3:\n")
+print(v_summary_n3)
+cat("\nVertical Summary N4:\n")
+print(v_summary_n4)
+cat("\nVertical Summary N6:\n")
+print(v_summary_n6)
+```
+
+########################################################################################
+PLOTTING WINDROSES
+########################################################################################
+
+```{r}
+# Function to create windrose using openair
+create_windrose_openair_nest <- function(data, nest) {
+  windRose(data, 
+           #type = 'month',
+           ws = 'Windspeed', 
+           wd = 'Winddir', 
+           paddle = FALSE, 
+           border = TRUE,
+           ws.int = 1, 
+           breaks = c(0, 0.5, 1, 2, 4, 6, 8, 10, 12),
+           main = paste("Windrose for Nest", nest),
+           key.position = "right",
+           key.title = "Wind Speed (m/s)",
+           annotate = TRUE,
+           par.settings = list(fontsize = list(text = 12)),
+           col = "YlOrRd",
+           angle.scale = 45,
+           grid.line.width = 0.5
+  )
+}
+```
+
+```{r}
+# Subsets for Control dataset
+control_wind_data_clean_n0 <- control_wind_data %>% filter(Nest == "0")
+
+# Subsets for South-oriented fixed-tilted dataset
+s_wind_data_clean_n1 <- s_wind_data %>% filter(Nest == "1")
+s_wind_data_clean_n2 <- s_wind_data %>% filter(Nest == "2")
+s_wind_data_clean_n5 <- s_wind_data %>% filter(Nest == "5")
+
+# Subsets for Vertical dataset
+v_wind_data_clean_n3 <- v_wind_data %>% filter(Nest == "3")
+v_wind_data_clean_n4 <- v_wind_data %>% filter(Nest == "4")
+v_wind_data_clean_n6 <- v_wind_data %>% filter(Nest == "6")
+```
+
+
+```{r}
+# Create windrose plots for each subset
+control_windrose_n0 <- create_windrose_openair_nest(control_wind_data_clean_n0, "0")
+
+s_windrose_n1 <- create_windrose_openair_nest(s_wind_data_clean_n1, "1")
+s_windrose_n2 <- create_windrose_openair_nest(s_wind_data_clean_n2, "2")
+s_windrose_n5 <- create_windrose_openair_nest(s_wind_data_clean_n5, "5")
+
+v_windrose_n3 <- create_windrose_openair_nest(v_wind_data_clean_n3, "3")
+v_windrose_n4 <- create_windrose_openair_nest(v_wind_data_clean_n4, "4")
+v_windrose_n6 <- create_windrose_openair_nest(v_wind_data_clean_n6, "6")
+
+# View the plots
+# control_windrose_n0
+# 
+# s_windrose_n1
+# s_windrose_n2
+# s_windrose_n5
+# 
+# v_windrose_n3
+# v_windrose_n4
+# v_windrose_n6
+```
+
+
+
+
+########################################################################################
+COMBINED WINDROSES PER PV_SYSTEM
+########################################################################################
+
+```{r}
+# Function to preprocess wind speed data
+preprocess_wind_speed <- function(data) {
+  data <- data %>%
+    # Categorize wind speeds below 4 m/s as 0,
+    mutate(Windspeed = ifelse(Windspeed < 4, 0, Windspeed))
+  return(data)
+}
+```
+
+```{r}
+###############################################################################################################
+# Combine data for CONTROL (nests 0)
+control_data <- control_wind_data %>% 
+  filter(Nest %in% c("0")) |> 
+  select(-Nest)
+
+control_data_combined <- preprocess_wind_speed(control_data) |> 
+  # Remove wind speed <= 0
+  filter(Windspeed != 0)
+
+###############################################################################################################
+# Combine data for PV_SYSTEM = SOUTH-ORIENTED (FIXED-TILTED) (nests 1, 2, and 5)
+south_oriented_data <- s_wind_data %>% 
+  filter(Nest %in% c("1", "2", "5")) |> 
+  mutate(Nest = "1,2,5") |> 
+  select(-Nest)
+
+s_wind_data_combined <- preprocess_wind_speed(south_oriented_data) |> 
+  # Remove wind speed <= 0
+  filter(Windspeed != 0)
+
+###############################################################################################################
+# Combine data for PV_SYSTEM = VERTICAL (nests 3, 4, and 6)
+vertical_data <- v_wind_data %>% 
+  filter(Nest %in% c("3", "4", "6")) |> 
+  mutate(Nest = "3,4,6") |> 
+  select(-Nest)
+
+v_wind_data_combined <- preprocess_wind_speed(vertical_data) |> 
+  # Remove wind speed <= 0
+  filter(Windspeed != 0)
+```
+
+```{r}
+head(south_oriented_data)
+```
+```{r}
+head(s_wind_data_combined)
+```
+```{r}
+# Function to check for NA, NaN, and empty values in a dataset
+check_missing_values <- function(data) {
+  # Check for NA values
+  na_count <- sum(is.na(data))
+  
+  # Check for NaN values
+  nan_count <- sum(is.nan(data))
+  
+  # Check for empty values (assuming empty means "")
+  empty_count <- sum(data == "", na.rm = TRUE)
+  
+  # Return a summary
+  list(
+    na_count = na_count,
+    nan_count = nan_count,
+    empty_count = empty_count
+  )
+}
+
+x_missing <- check_missing_values(s_wind_data$Windspeed)
+x_missing
+```
+
+
+########################################################################################
+FINAL PLOTS WITH ANNOTATIONS
+########################################################################################
+
+```{r}
+###############################################################################################################
+# Annotations
+
+windrose_y_axis <- c(
+    paste("Frequency of counts by wind direction (%)")
+)
+
+###############################################################################################################
+# Reference
+
+custom_annotation_c_mean_wind <- c(
+    paste("Mean wind speed: ", round(mean(control_wind_data$Windspeed, na.rm = TRUE), 2), "m/s")
+  )
+
+custom_annotation_c_calm <- c(
+    paste("Calm conditions: ", round(sum(control_wind_data$Windspeed <= 4) / nrow(control_wind_data) * 100, 1), "%")
+  )
+
+###############################################################################################################
+# South-oriented
+
+custom_annotation_s_mean_wind <- c(
+    paste("Mean wind speed: ", round(mean(s_wind_data$Windspeed, na.rm = TRUE), 2), "m/s")
+  )
+
+custom_annotation_s_calm <- c(
+    paste("Calm conditions: ", round(sum(s_wind_data$Windspeed <= 4) / nrow(s_wind_data) * 100, 1), "%")
+  )
+
+###############################################################################################################
+# Vertical
+
+custom_annotation_v_mean_wind <- c(
+    paste("Mean wind speed: ", round(mean(v_wind_data$Windspeed, na.rm = TRUE), 2), "m/s")
+  )
+
+custom_annotation_v_calm <- c(
+    paste("Calm conditions: ", round(sum(v_wind_data$Windspeed <= 4) / nrow(v_wind_data) * 100, 1), "%")
+  )
+
+###################################################################################
+
+```
+
+```{r}
+# Function to create windrose with custom annotations using ggplot2
+create_combined_windrose <- function(data, pv_system) {
+  windRose(data, 
+                ws = 'Windspeed', 
+                wd = 'Winddir', 
+                paddle = FALSE, 
+                border = TRUE,
+                annotate = FALSE,
+                statistic = "prop.count",
+                ws.int = 1, 
+                breaks = c(4, 6, 8, 12, 18, 20),
+                main = paste("", pv_system),
+                key.position = "right",
+                key.title = "Wind Speed (m/s)",
+           # Colors can be changed according to the system of choice
+           # Reference 'open-field': PuBuGn / Greens
+           # South-oriented: Blues
+           # Vertical: Oranges
+                col = "Oranges",
+                angle.scale = 45,
+                grid.line.width = 0.5,
+                normalise = FALSE
+  )
+  
+}
+```
+
+
+SAVE MANUALLY BY EXPORTING PLOT FROM PLOT PANE WINDOW
+
+```{r}
+# Create windrose plots for control, south-oriented, and vertical datasets
+
+# STEP 1: MAKE PLOT
+# SAVE MANUALLY BY EXPORTING PLOT FROM PLOT PANE WINDOW
+
+###################################################################################
+
+control_windrose <- create_combined_windrose(control_data_combined, 
+                                             # Update function colors before plotting
+                                             pv_system = "OPEN FIELD     " 
+                                             )
+
+###################################################################################
+
+south_oriented_windrose <- create_combined_windrose(s_wind_data_combined, 
+                                                    # Update function colors before plotting
+                                                    "TILTED SOUTH-ORIENTED SYSTEM        " 
+                                                    )
+
+###################################################################################
+
+vertical_windrose <- create_combined_windrose(v_wind_data_combined, 
+                                              # Update function colors before plotting
+                                              "VERTICAL SYSTEM       " 
+                                              )
+
+```
+
+MANUALLY READ THE SAVED IMAGE PLOTS BACK INTO R
+
+```{r}
+# STEP 2: READ THE SAVED IMAGE PLOTS BACK INTO R
+
+img_windrose_c <- image_read("./FIGURES/MICROCLIM/windrose_open_field.png")
+img_windrose_s <- image_read("./FIGURES/MICROCLIM/windrose_south_oriented.png")
+img_windrose_v <- image_read("./FIGURES/MICROCLIM/windrose_vertical.png")
+
+
+
+# STEP 3: CREATE A GGPLOT OBJECT WITH THE IMAGE AND ADDING MY COSTUM ANNOTATIONS
+
+###################################################################################
+# Reference
+
+img_windrose_c_anno <- ggplot() +
+  annotation_custom(rasterGrob(img_windrose_c, width = unit(12,"cm"), height = unit(12,"cm"))) +
+  annotate("text", x = 2, y = 0, label = custom_annotation_c_mean_wind, 
+           hjust = 1, 
+           vjust = 17, 
+           size = 4, 
+           colour = "darkgreen") +
+  annotate("text", x = 2, y = 0, label = custom_annotation_c_calm, 
+           hjust = 1.12, 
+           vjust = 18, 
+           size = 4, 
+           colour = "darkgreen") +
+  annotate("text", x = 2, y = 0, label = windrose_y_axis, 
+           hjust = 0.6, 
+           vjust = 17, 
+           size = 5, 
+           colour = "black") +
+  theme_void()
+
+###################################################################################
+# South-oriented
+
+img_windrose_s_anno <- ggplot() +
+  annotation_custom(rasterGrob(img_windrose_s, width = unit(12,"cm"), height = unit(12,"cm"))) +
+  annotate("text", x = 2, y = 0, label = custom_annotation_s_mean_wind, 
+           hjust = 1, 
+           vjust = 17, 
+           size = 4, 
+           colour = "darkgreen") +
+  annotate("text", x = 2, y = 0, label = custom_annotation_s_calm, 
+           hjust = 1.12, 
+           vjust = 18, 
+           size = 4, 
+           colour = "darkgreen") +
+  annotate("text", x = 2, y = 0, label = windrose_y_axis, 
+           hjust = 0.6, 
+           vjust = 17, 
+           size = 5, 
+           colour = "black") +
+  theme_void()
+
+###################################################################################
+# Vertical
+
+img_windrose_v_anno <- ggplot() +
+  annotation_custom(rasterGrob(img_windrose_v, width = unit(12,"cm"), height = unit(12,"cm"))) +
+  annotate("text", x = 2, y = 0, label = custom_annotation_v_mean_wind, 
+           hjust = 1, 
+           vjust = 17, 
+           size = 4, 
+           colour = "darkgreen") +
+  annotate("text", x = 2, y = 0, label = custom_annotation_v_calm, 
+           hjust = 1.12, 
+           vjust = 18, 
+           size = 4, 
+           colour = "darkgreen") +
+  annotate("text", x = 2, y = 0, label = windrose_y_axis, 
+           hjust = 0.6, 
+           vjust = 17, 
+           size = 5, 
+           colour = "black") +
+  theme_void()
+```
+
+SAVE MANUALLY BY EXPORTING PLOT FROM PLOT PANE WINDOW (600 x 600)
+
+```{r}
+img_windrose_c_anno
+img_windrose_s_anno
+img_windrose_v_anno
+
+# SAVE MANUALLY BY EXPORTING PLOT FROM PLOT PANE WINDOW (600 x 600)
+
+# CARDINALS (N, S, E, W) ARE ADDED MANUALLY IN ADOBE Illustrator
+```
+
+```{r}
+img_windrose_combined_final <- image_read("./FIGURES/MICROCLIM/windrose_figure_final_windrose_combined_figure_updated_col_windrose_combined_figure_windrose_combined_figure.png")
+
+img_windrose_combined_final
+```
