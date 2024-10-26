@@ -817,7 +817,7 @@ a_LER_grain_plot_global_mean
 
 ```{r, eval=FALSE}
 # Specify the folder path and file name
-folder_path <- "C:/Users/au759124/OneDrive - Aarhus universitet/Documents/V4F_agrivoltaics/FIGURES/LER"
+folder_path <- "OUTPUT"
 file_name <- "a_LER_grain_plot_global_mean.jpg"
 output_path <- file.path(folder_path, file_name)
 
@@ -837,7 +837,7 @@ a_LER_clover_plot_global_mean
 
 ```{r}
 # Specify the folder path and file name
-folder_path <- "C:/Users/au759124/OneDrive - Aarhus universitet/Documents/V4F_agrivoltaics/FIGURES/LER"
+folder_path <- "OUTPUT"
 file_name <- "a_LER_clover_plot_global_mean.jpg"
 output_path <- file.path(folder_path, file_name)
 
@@ -1301,7 +1301,7 @@ clover_table_global_mean
 
 ```{r}
 # Define the folder path where you want to save the images
-folder_path <- "C:/Users/au759124/OneDrive - Aarhus universitet/Documents/V4F_agrivoltaics/FIGURES/LER"
+folder_path <- "OUTPUT"
 
 # Save the grain table as a PNG image
 grain_table_file_name <- "grain_table_global_mean.png"
@@ -1466,7 +1466,7 @@ combined_LER_table_modified_2 <- combined_LER_table_modified %>%
   )
 
 # Define the folder path where you want to save the images
-folder_path <- "C:/Users/au759124/OneDrive - Aarhus universitet/Documents/V4F_agrivoltaics/FIGURES/LER"
+folder_path <- "OUTPUT"
 
 # Save the combined_LER_table_modified
 table_file_name <- "combined_LER_table_modified_2.png"
@@ -1493,7 +1493,7 @@ combined_LER_table_data <- bind_rows(
   select(PV_SETUP_2, Crop_Type, a_LER, relative_crop_yield, relative_energy_yield, land_loss, mean_dry_weight, ELECTRICITY_OUTPUT_MWH_HA_YR)  # Reorder the columns
 
 # Write the combined data to an Excel file
-output_file_path <- "C:/Users/au759124/OneDrive - Aarhus universitet/Documents/V4F_agrivoltaics/FIGURES/LER/combined_LER_table_modified.xlsx"
+output_file_path <- "OUTPUT"
 write_xlsx(combined_LER_table_data, output_file_path)
 
 # Print a message to confirm the file was saved
@@ -1518,7 +1518,7 @@ cat("The combined LER table has been saved to:", output_file_path)
 
 
 # # Define the folder path where you want to save the images
-# folder_path <- "C:/Users/au759124/OneDrive - Aarhus universitet/Documents/V4F_agrivoltaics/FIGURES/LER"
+# folder_path <- "OUTPUT"
 # 
 # # Save the grain table as a PNG image
 # combined_LER_table_file_name <- "combined_LER_table.png"
