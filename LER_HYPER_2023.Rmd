@@ -117,7 +117,7 @@ yield_data <- hyperfarm_2023_yield %>%
     SUB_STRIP_LOCATION = as.factor(SUB_STRIP_LOCATION),
     PRODUCT = as.factor(PRODUCT),
     CUT = as.factor(CUT),
-    DRY_WEIGHT_1_HA   = as.numeric(DRY_WEIGHT_1_HA)
+    DRY_WEIGHT_TON_HA   = as.numeric(DRY_WEIGHT_TON_HA)
     ) %>%
   # Safely create the CUT_DATE column
   mutate(CUT_DATE = if_else(!is.na(CUT_YEAR) & !is.na(CUT_MONTH) & !is.na(CUT_DAY),
@@ -144,16 +144,16 @@ yield_data %>%
   filter(PRODUCT == "Straw") %>% 
   #filter(PV_SETUP == "FIXED_TILTED") %>%
   filter(LOCATION == "OUTSIDE_PV") %>% 
-  relocate(DRY_WEIGHT_1_HA, PV_SETUP, SUB_STRIP_LOCATION, SUB_STRIP_LOCATION_BETWEEN_PV_vs_REFERENCE) 
+  relocate(DRY_WEIGHT_TON_HA, PV_SETUP, SUB_STRIP_LOCATION, SUB_STRIP_LOCATION_BETWEEN_PV_vs_REFERENCE) 
 
 yield_data %>% 
   filter(CROP == "WW") %>% 
   group_by(PV_SETUP, PRODUCT) %>%
-  relocate(DRY_WEIGHT_1_HA, PV_SETUP, SUB_STRIP_LOCATION, SUB_STRIP_LOCATION_BETWEEN_PV_vs_REFERENCE) %>% 
+  relocate(DRY_WEIGHT_TON_HA, PV_SETUP, SUB_STRIP_LOCATION, SUB_STRIP_LOCATION_BETWEEN_PV_vs_REFERENCE) %>% 
   summarize(
-    mean_dry_weight = mean(DRY_WEIGHT_1_HA, na.rm = TRUE),
-    sd_dry_weight = sd(DRY_WEIGHT_1_HA, na.rm = TRUE),
-    median_dry_weight = median(DRY_WEIGHT_1_HA, na.rm = TRUE),
+    mean_dry_weight = mean(DRY_WEIGHT_TON_HA, na.rm = TRUE),
+    sd_dry_weight = sd(DRY_WEIGHT_TON_HA, na.rm = TRUE),
+    median_dry_weight = median(DRY_WEIGHT_TON_HA, na.rm = TRUE),
     count = n(),
     .groups = 'drop'
   )
@@ -161,11 +161,11 @@ yield_data %>%
 yield_data %>% 
   filter(CROP == "WW") %>% 
   group_by(LOCATION, PV_SETUP, PRODUCT) %>%
-  relocate(DRY_WEIGHT_1_HA, PV_SETUP, SUB_STRIP_LOCATION, SUB_STRIP_LOCATION_BETWEEN_PV_vs_REFERENCE) %>% 
+  relocate(DRY_WEIGHT_TON_HA, PV_SETUP, SUB_STRIP_LOCATION, SUB_STRIP_LOCATION_BETWEEN_PV_vs_REFERENCE) %>% 
   summarize(
-    mean_dry_weight = mean(DRY_WEIGHT_1_HA, na.rm = TRUE),
-    sd_dry_weight = sd(DRY_WEIGHT_1_HA, na.rm = TRUE),
-    median_dry_weight = median(DRY_WEIGHT_1_HA, na.rm = TRUE),
+    mean_dry_weight = mean(DRY_WEIGHT_TON_HA, na.rm = TRUE),
+    sd_dry_weight = sd(DRY_WEIGHT_TON_HA, na.rm = TRUE),
+    median_dry_weight = median(DRY_WEIGHT_TON_HA, na.rm = TRUE),
     count = n(),
     .groups = 'drop'
   ) |> 
@@ -177,7 +177,7 @@ yield_data %>%
 global_means <- yield_data %>%
   filter(LOCATION == "OUTSIDE_PV") %>%  # Only consider "OUTSIDE_PV" locations
   group_by(PRODUCT) %>%  # Group by product
-  summarize(global_mean_dry_weight = mean(DRY_WEIGHT_1_HA, na.rm = TRUE), .groups = 'drop')  # Calculate global mean
+  summarize(global_mean_dry_weight = mean(DRY_WEIGHT_TON_HA, na.rm = TRUE), .groups = 'drop')  # Calculate global mean
 
 # Join the global mean back to the original dataset
 yield_data_with_global_mean <- yield_data %>%
@@ -186,13 +186,13 @@ yield_data_with_global_mean <- yield_data %>%
 # View the updated dataset
 yield_data_with_global_mean %>%
   filter(CROP == "WW" & PRODUCT == "Grain") %>%  # Filter for "WW" crop as an example
-  select(PRODUCT, PV_SETUP, LOCATION, DRY_WEIGHT_1_HA, global_mean_dry_weight) |>   # Select relevant columns for display
+  select(PRODUCT, PV_SETUP, LOCATION, DRY_WEIGHT_TON_HA, global_mean_dry_weight) |>   # Select relevant columns for display
   filter(LOCATION == "OUTSIDE_PV")
 
 # View the updated dataset
 yield_data_with_global_mean %>%
   filter(CROP == "GC") %>%  # Filter for "GC" crop as an example
-  select(PRODUCT, PV_SETUP, LOCATION, DRY_WEIGHT_1_HA, global_mean_dry_weight) |>   # Select relevant columns for display
+  select(PRODUCT, PV_SETUP, LOCATION, DRY_WEIGHT_TON_HA, global_mean_dry_weight) |>   # Select relevant columns for display
   filter(LOCATION == "OUTSIDE_PV")
 ```
 
@@ -202,7 +202,7 @@ yield_data_with_global_mean %>%
 
 ```{r}
 # Fitting linear mixed model for all crops where product type is included as main factor
-lmm_hyperfarm <- lmerTest::lmer(DRY_WEIGHT_1_HA ~ PV_SETUP + LOCATION + PRODUCT + 
+lmm_hyperfarm <- lmerTest::lmer(DRY_WEIGHT_TON_HA ~ PV_SETUP + LOCATION + PRODUCT + 
                                   PV_SETUP:LOCATION +
                                   PV_SETUP:PRODUCT +
                                   (1 | SUB_STRIP), 
@@ -247,7 +247,7 @@ pairs_df_grain <- as.data.frame(pairs_grain) %>%
 ```{r}
 # Prepare data for plotting EMMs
 emm_means_df <- as.data.frame(emm_outside_pv$emmeans) %>%
-  filter(LOCATION == "OUTSIDE_PV" & PRODUCT %in% c("Grain", "Grass_Clover")) |> 
+  filter(LOCATION == "OUTSIDE_PV" & PRODUCT %in% c("GRAIN", "GRASS_CLOVER")) |> 
   mutate(
       PV_SETUP = case_when(
         PV_SETUP == "FIXED_TILTED" ~ "SOUTH_ORIENTED",
@@ -291,7 +291,7 @@ yield_data_lm <- yield_data |>
     SUB_STRIP_LOCATION_BETWEEN_PV_vs_REFERENCE == "MIDDLE" & PV_SETUP == "VERTICAL", "MIDDLE_V", 
     ifelse(SUB_STRIP_LOCATION_BETWEEN_PV_vs_REFERENCE == "MIDDLE" & PV_SETUP == "SOUTH_ORIENTED", "MIDDLE_S",
            SUB_STRIP_LOCATION_BETWEEN_PV_vs_REFERENCE))) |> 
-  relocate(PV_SETUP, SETUP_BETWEEN_PV_vs_REFERENCE, SUB_STRIP_LOCATION_BETWEEN_PV_vs_REFERENCE, PRODUCT, LOCATION, DRY_WEIGHT_1_HA) |> glimpse()
+  relocate(PV_SETUP, SETUP_BETWEEN_PV_vs_REFERENCE, SUB_STRIP_LOCATION_BETWEEN_PV_vs_REFERENCE, PRODUCT, LOCATION, DRY_WEIGHT_TON_HA) |> glimpse()
 ```
 
 
@@ -301,11 +301,11 @@ yield_data_lm <- yield_data |>
 # The linear model lm_hyperfarm_substrips_full is formulated to evaluate whether there are significant differences in crop yields between different substrips located within the PV setups (east, center, west for VERTICAL, and north, center, south for FIXED_TILTED) and the reference plots located outside the PV panels (open-field). Specifically, the model tests the null hypothesis (H0) that there is no difference in crop yields between any of the substrip positions within the PV systems and the reference plots.
 
 # Simpler model without interactions
-lm_hyperfarm_substrips_simple <- lm(DRY_WEIGHT_1_HA ~ SETUP_BETWEEN_PV_vs_REFERENCE + SUB_STRIP_LOCATION_BETWEEN_PV_vs_REFERENCE + PRODUCT, 
+lm_hyperfarm_substrips_simple <- lm(DRY_WEIGHT_TON_HA ~ SETUP_BETWEEN_PV_vs_REFERENCE + SUB_STRIP_LOCATION_BETWEEN_PV_vs_REFERENCE + PRODUCT, 
                                     data = yield_data_lm)
 
 # Full model with interactions
-lm_hyperfarm_substrips_full <- lm(DRY_WEIGHT_1_HA ~ SETUP_BETWEEN_PV_vs_REFERENCE + SUB_STRIP_LOCATION_BETWEEN_PV_vs_REFERENCE + PRODUCT + 
+lm_hyperfarm_substrips_full <- lm(DRY_WEIGHT_TON_HA ~ SETUP_BETWEEN_PV_vs_REFERENCE + SUB_STRIP_LOCATION_BETWEEN_PV_vs_REFERENCE + PRODUCT + 
                                     SETUP_BETWEEN_PV_vs_REFERENCE:SUB_STRIP_LOCATION_BETWEEN_PV_vs_REFERENCE +
                                     SETUP_BETWEEN_PV_vs_REFERENCE:PRODUCT, 
                                     data = yield_data_lm)
@@ -336,9 +336,9 @@ Lastly, the ANOVA comparison of the simple and full models indicates that adding
 # Calculate the means for each combination of factors
 overall_means <- yield_data_lm %>%
   group_by(SETUP_BETWEEN_PV_vs_REFERENCE, SUB_STRIP_LOCATION_BETWEEN_PV_vs_REFERENCE, PRODUCT) |> 
-  relocate(SETUP_BETWEEN_PV_vs_REFERENCE, SUB_STRIP_LOCATION_BETWEEN_PV_vs_REFERENCE, PRODUCT, LOCATION, DRY_WEIGHT_1_HA) |> 
+  relocate(SETUP_BETWEEN_PV_vs_REFERENCE, SUB_STRIP_LOCATION_BETWEEN_PV_vs_REFERENCE, PRODUCT, LOCATION, DRY_WEIGHT_TON_HA) |> 
 
-    summarise(mean_yield = mean(DRY_WEIGHT_1_HA, na.rm = FALSE))
+    summarise(mean_yield = mean(DRY_WEIGHT_TON_HA, na.rm = FALSE))
 
 overall_means
 ```
@@ -354,8 +354,8 @@ count_combinations
 # Interaction means
 interaction_means <- yield_data_lm %>%
   group_by(SETUP_BETWEEN_PV_vs_REFERENCE, SUB_STRIP_LOCATION_BETWEEN_PV_vs_REFERENCE, PRODUCT) |> 
-  relocate(SETUP_BETWEEN_PV_vs_REFERENCE, SUB_STRIP_LOCATION_BETWEEN_PV_vs_REFERENCE, PRODUCT, LOCATION, DRY_WEIGHT_1_HA) |> 
-  summarise(mean_yield = mean(DRY_WEIGHT_1_HA, na.rm = FALSE))
+  relocate(SETUP_BETWEEN_PV_vs_REFERENCE, SUB_STRIP_LOCATION_BETWEEN_PV_vs_REFERENCE, PRODUCT, LOCATION, DRY_WEIGHT_TON_HA) |> 
+  summarise(mean_yield = mean(DRY_WEIGHT_TON_HA, na.rm = FALSE))
 
 ```
 
@@ -492,35 +492,54 @@ emmip_plot
 ##############################################################################################################################
 ## CALCULATE a-LER
 ##############################################################################################################################
-
 ```{r}
-
-yield_data  %>%
+# Process yield_data and summarize, then join with pv_data
+yield_data |> 
   mutate(
     PV_SETUP_2 = case_when(
       PV_SETUP == "VERTICAL" & LOCATION == "BETWEEN_PV" ~ "VERTICAL_BETWEEN_PV",
       PV_SETUP == "VERTICAL" & LOCATION == "OUTSIDE_PV" ~ "VERTICAL_OUTSIDE_PV",
-      PV_SETUP == "FIXED_TILTED" & LOCATION == "BETWEEN_PV" ~ "SOUTH-ORIENTED_BETWEEN_PV",
-      PV_SETUP == "FIXED_TILTED" & LOCATION == "OUTSIDE_PV" ~ "SOUTH-ORIENTED_OUTSIDE_PV",
+      PV_SETUP == "SOUTH_ORIENTED" & LOCATION == "BETWEEN_PV" ~ "SOUTH_ORIENTED_BETWEEN_PV",
+      PV_SETUP == "SOUTH_ORIENTED" & LOCATION == "OUTSIDE_PV" ~ "SOUTH_ORIENTED_OUTSIDE_PV",
       TRUE ~ NA_character_  # Handle any other cases if they exist
+    ),
+    # Add a new column to match with PV_SETUP in pv_data
+    PV_SETUP_MATCH = case_when(
+      PV_SETUP == "VERTICAL" ~ "VERTICAL",
+      PV_SETUP == "SOUTH_ORIENTED" ~ "SOUTH_ORIENTED",
+      TRUE ~ NA_character_
     )
-  ) |> relocate(PV_SETUP_2, DRY_WEIGHT_1_HA) |> 
+  ) |> 
+  relocate(PV_SETUP_2, DRY_WEIGHT_TON_HA) |> 
+  
   # Filter data for "Grain" product
-  filter(PRODUCT == "Grain") %>%
+  filter(PRODUCT == "GRAIN") |> 
   
   # Group by the new PV_SETUP_2
-  group_by(PV_SETUP_2) %>%
+  group_by(PV_SETUP_2, PV_SETUP_MATCH) |> 
   
   # Summarize crop yields
   summarise(
-    mean_dry_weight = mean(DRY_WEIGHT_1_HA, na.rm = TRUE),
-    sd_dry_weight = sd(DRY_WEIGHT_1_HA, na.rm = TRUE),
-    median_dry_weight = median(DRY_WEIGHT_1_HA, na.rm = TRUE),
-    count = n()
+    mean_dry_weight = mean(DRY_WEIGHT_TON_HA, na.rm = TRUE),
+    sd_dry_weight = sd(DRY_WEIGHT_TON_HA, na.rm = TRUE),
+    median_dry_weight = median(DRY_WEIGHT_TON_HA, na.rm = TRUE),
+    count = n(),
+    .groups = 'drop'
   ) |> 
-  # Join summarized yield data with pv_data
-  inner_join(pv_data, by = c("PV_SETUP_2" = "PV_SETUP")) 
- 
+  
+  # Join summarized yield data with pv_data on PV_SETUP_MATCH and PV_SETUP
+  inner_join(pv_data, by = c("PV_SETUP_MATCH" = "PV_SETUP")) |> 
+  
+  # Select relevant columns and remove the temporary PV_SETUP_MATCH
+  select(PV_SETUP_2, 
+         mean_dry_weight, 
+         sd_dry_weight, 
+         median_dry_weight, 
+         count, 
+         GCR, 
+         ELECTRICITY_OUTPUT_MWH_HA_YR, 
+         EFFECIENCY_KWH_KW, 
+         INSTALLED_CAPACITY_KW)
 ```
 
 ```{r}
@@ -545,11 +564,13 @@ pv_data_preproc <- pv_data %>%
   mutate(
     PV_SETUP_2 = case_when(
       PV_SETUP_2 == "VERTICAL" ~ "VERTICAL_BETWEEN_PV",
-      PV_SETUP_2 == "SOUTH-ORIENTED" ~ "SOUTH-ORIENTED_BETWEEN_PV",
+      PV_SETUP_2 == "SOUTH_ORIENTED" ~ "SOUTH_ORIENTED_BETWEEN_PV",
       PV_SETUP_2 == "REFERENCE" ~ "REFERENCE",
       TRUE ~ NA_character_  # Handle unexpected cases
     )
   )
+
+pv_data_preproc
 ```
 
 ```{r}
@@ -562,17 +583,17 @@ process_yield_data <- function(yield_data, pv_data, product_name) {
       PV_SETUP_2 = case_when(
         PV_SETUP == "VERTICAL" & LOCATION == "BETWEEN_PV" ~ "VERTICAL_BETWEEN_PV",
         PV_SETUP == "VERTICAL" & LOCATION == "OUTSIDE_PV" ~ "VERTICAL_OUTSIDE_PV",
-        PV_SETUP == "FIXED_TILTED" & LOCATION == "BETWEEN_PV" ~ "SOUTH-ORIENTED_BETWEEN_PV",
-        PV_SETUP == "FIXED_TILTED" & LOCATION == "OUTSIDE_PV" ~ "SOUTH-ORIENTED_OUTSIDE_PV",
+        PV_SETUP == "SOUTH_ORIENTED" & LOCATION == "BETWEEN_PV" ~ "SOUTH_ORIENTED_BETWEEN_PV",
+        PV_SETUP == "SOUTH_ORIENTED" & LOCATION == "OUTSIDE_PV" ~ "SOUTH_ORIENTED_OUTSIDE_PV",
         TRUE ~ NA_character_  # Handle unexpected cases
       )
     ) %>%
     filter(PRODUCT == product_name) %>%  # Filter for the specified product
     group_by(PV_SETUP_2) %>%  # Group by the newly created PV_SETUP_2
     summarise(
-      mean_dry_weight = mean(DRY_WEIGHT_1_HA, na.rm = TRUE),
-      sd_dry_weight = sd(DRY_WEIGHT_1_HA, na.rm = TRUE),
-      median_dry_weight = median(DRY_WEIGHT_1_HA, na.rm = TRUE),
+      mean_dry_weight = mean(DRY_WEIGHT_TON_HA , na.rm = TRUE),
+      sd_dry_weight = sd(DRY_WEIGHT_TON_HA , na.rm = TRUE),
+      median_dry_weight = median(DRY_WEIGHT_TON_HA , na.rm = TRUE),
       count = n()
     ) %>%
     left_join(pv_data, by = "PV_SETUP_2") %>%  # Merge with PV data
@@ -589,14 +610,12 @@ process_yield_data <- function(yield_data, pv_data, product_name) {
 
 ```{r}
 # Example usage for Grain and Grass-Clover
-combined_ler_data_grain <- process_yield_data(yield_data, pv_data_preproc, "Grain")
-combined_ler_data_clover <- process_yield_data(yield_data, pv_data_preproc, "Grass_Clover")
+combined_ler_data_grain <- process_yield_data(yield_data, pv_data_preproc, "GRAIN")
+combined_ler_data_clover <- process_yield_data(yield_data, pv_data_preproc, "GRASS_CLOVER")
 ```
-
-
 ```{r}
 calculate_a_LER <- function(combined_ler_data, use_global_mean = FALSE) {
-
+  
   # Calculate the global mean dry weight from all "OUTSIDE_PV" setups
   global_mean_dry_weight <- combined_ler_data %>%
     filter(grepl("OUTSIDE_PV", PV_SETUP_2)) %>%
@@ -605,31 +624,27 @@ calculate_a_LER <- function(combined_ler_data, use_global_mean = FALSE) {
   
   pv_setup_ler <- combined_ler_data %>%
     
-    # Calculate the crop yield ratio correctly
+    # Calculate the crop yield ratio directly
     mutate(
       crop_yield_ratio = case_when(
-        
-        # For the SOUTH-ORIENTED_BETWEEN_PV setup
-        PV_SETUP_2 == "SOUTH-ORIENTED_BETWEEN_PV" ~ mean_dry_weight / 
+        # South-Oriented setup calculation
+        PV_SETUP_2 == "SOUTH_ORIENTED_BETWEEN_PV" ~ mean_dry_weight / 
           ifelse(use_global_mean, 
                  global_mean_dry_weight,  # Use global mean dry weight as the reference
-                 combined_ler_data$mean_dry_weight[combined_ler_data$PV_SETUP_2 == "SOUTH-ORIENTED_OUTSIDE_PV"]  # Use the specific mean dry weight from "SOUTH-ORIENTED_OUTSIDE_PV"
+                 combined_ler_data$mean_dry_weight[combined_ler_data$PV_SETUP_2 == "SOUTH_ORIENTED_OUTSIDE_PV"]  # Use specific mean dry weight
           ),
-        
-        # For the VERTICAL_BETWEEN_PV setup
+        # Vertical setup calculation
         PV_SETUP_2 == "VERTICAL_BETWEEN_PV" ~ mean_dry_weight / 
           ifelse(use_global_mean, 
                  global_mean_dry_weight,  # Use global mean dry weight as the reference
-                 combined_ler_data$mean_dry_weight[combined_ler_data$PV_SETUP_2 == "VERTICAL_OUTSIDE_PV"]  # Use the specific mean dry weight from "VERTICAL_OUTSIDE_PV"
+                 combined_ler_data$mean_dry_weight[combined_ler_data$PV_SETUP_2 == "VERTICAL_OUTSIDE_PV"]  # Use specific mean dry weight
           ),
-        
-        # For any other PV setups, return NA as crop_yield_ratio is not applicable
         TRUE ~ NA_real_
       ),
       
-      # Calculate the land adjustment factor using the formula with correct units
+      # Calculate the land adjustment factor
       land_adjustment_factor = case_when(
-        PV_SETUP_2 == "SOUTH-ORIENTED_BETWEEN_PV" ~ ((TOTAL_AREA_OCCUPIED_M2 / 10000 - LL_HA) / (TOTAL_AREA_OCCUPIED_M2 / 10000)),
+        PV_SETUP_2 == "SOUTH_ORIENTED_BETWEEN_PV" ~ ((TOTAL_AREA_OCCUPIED_M2 / 10000 - LL_HA) / (TOTAL_AREA_OCCUPIED_M2 / 10000)),
         PV_SETUP_2 == "VERTICAL_BETWEEN_PV" ~ ((TOTAL_AREA_OCCUPIED_M2 / 10000 - LL_HA) / (TOTAL_AREA_OCCUPIED_M2 / 10000)),
         TRUE ~ 1
       ),
@@ -643,7 +658,7 @@ calculate_a_LER <- function(combined_ler_data, use_global_mean = FALSE) {
       energy_output_component = ELECTRICITY_OUTPUT_MWH_HA_YR / combined_ler_data$ELECTRICITY_OUTPUT_MWH_HA_YR[combined_ler_data$PV_SETUP_2 == "REFERENCE"]
     ) %>%
     
-    # Calculate a-LER
+    # Calculate a-LER (directly, without percentage adjustments)
     mutate(
       a_LER = crop_yield_component + energy_output_component
     )
@@ -651,49 +666,10 @@ calculate_a_LER <- function(combined_ler_data, use_global_mean = FALSE) {
   return(pv_setup_ler)
 }
 
-
-# Define a function to add the required columns to any dataset
-add_relative_yield_columns <- function(data) {
-  data %>%
-    mutate(
-      # Calculate relative crop yield for vertical and south-oriented setups
-      relative_crop_yield_vertical = ifelse(PV_SETUP_2 == "VERTICAL_BETWEEN_PV", 
-                                            (mean_dry_weight / data$mean_dry_weight[data$PV_SETUP_2 == "VERTICAL_OUTSIDE_PV"]) * 100, 
-                                            NA_real_),
-      relative_crop_yield_south_oriented = ifelse(PV_SETUP_2 == "SOUTH-ORIENTED_BETWEEN_PV", 
-                                                  (mean_dry_weight / data$mean_dry_weight[data$PV_SETUP_2 == "SOUTH-ORIENTED_OUTSIDE_PV"]) * 100, 
-                                                  NA_real_),
-      
-      # Calculate relative energy yield for vertical and south-oriented setups
-      relative_energy_yield_vertical = ifelse(PV_SETUP_2 == "VERTICAL_BETWEEN_PV", 
-                                              (ELECTRICITY_OUTPUT_MWH_HA_YR / data$ELECTRICITY_OUTPUT_MWH_HA_YR[data$PV_SETUP_2 == "REFERENCE"]) * 100, 
-                                              NA_real_),
-      relative_energy_yield_south_oriented = ifelse(PV_SETUP_2 == "SOUTH-ORIENTED_BETWEEN_PV", 
-                                                    (ELECTRICITY_OUTPUT_MWH_HA_YR / data$ELECTRICITY_OUTPUT_MWH_HA_YR[data$PV_SETUP_2 == "REFERENCE"]) * 100, 
-                                                    NA_real_),
-      
-      # Calculate land loss percentages for vertical and south-oriented setups
-      land_loss_vertical = ifelse(PV_SETUP_2 == "VERTICAL_BETWEEN_PV", 
-                                  (LL_HA / (TOTAL_AREA_OCCUPIED_M2 / 10000)) * 100, 
-                                  NA_real_),
-      land_loss_south_oriented = ifelse(PV_SETUP_2 == "SOUTH-ORIENTED_BETWEEN_PV", 
-                                        (LL_HA / (TOTAL_AREA_OCCUPIED_M2 / 10000)) * 100, 
-                                        NA_real_)
-    )
-}
-
-# Function to calculate and return the full dataset with a-LER, relative yield, and land loss components
-calculate_full_LER <- function(data, use_global_mean = FALSE) {
-  calculated_data <- calculate_a_LER(data, use_global_mean = use_global_mean)
-  final_data <- add_relative_yield_columns(calculated_data)
-  
-  return(final_data)
-}
 ```
 
-
-
-
+  # Remove all rows with "_OUTSIDE_PV" in the PV_SETUP_2 column
+    filter(!grepl("_OUTSIDE_PV", PV_SETUP_2))
 
 ```{r}
 # Apply the function to both grain and clover datasets
@@ -704,6 +680,8 @@ calculate_full_LER <- function(data, use_global_mean = FALSE) {
 a_LER_grain_global_mean <- calculate_a_LER(combined_ler_data = combined_ler_data_grain,
                                use_global_mean = TRUE) |> 
   relocate(PV_SETUP_2, mean_dry_weight, LL_HA, ELECTRICITY_OUTPUT_MWH_HA_YR, a_LER)
+
+  
 #############################
 a_LER_grain_pv_sys_mean <- calculate_a_LER(combined_ler_data = combined_ler_data_grain,
                                use_global_mean = FALSE) |> 
@@ -727,7 +705,7 @@ rename_pv_setup <- function(data) {
   data %>%
     mutate(
       PV_SETUP_2 = case_when(
-        PV_SETUP_2 == "SOUTH-ORIENTED_BETWEEN_PV" ~ "SOUTH-ORIENTED",
+        PV_SETUP_2 == "SOUTH_ORIENTED_BETWEEN_PV" ~ "SOUTH-ORIENTED",
         PV_SETUP_2 == "VERTICAL_BETWEEN_PV" ~ "VERTICAL",
         PV_SETUP_2 == "REFERENCE" ~ "REFERENCE",  # Keep REFERENCE unchanged
         TRUE ~ PV_SETUP_2  # Leave other values unchanged if any
@@ -746,10 +724,12 @@ a_LER_clover_pv_sys_mean_clean <- rename_pv_setup(a_LER_clover_pv_sys_mean)
 ```{r}
 # View datasets
 
+##################################### Global mean
 a_LER_grain_global_mean_clean
-a_LER_grain_pv_sys_mean_clean
-
 a_LER_clover_global_mean_clean
+##################################### PV System mean
+
+a_LER_grain_pv_sys_mean_clean
 a_LER_clover_pv_sys_mean_clean
 ```
 
@@ -831,7 +811,7 @@ treatment_colors <- c(
 
 ```{r}
 # Generate the combined plot for Grain
-a_LER_grain_plot_global_mean <- plot_combined_a_LER(a_LER_grain_global_mean_clean, "Grain")
+a_LER_grain_plot_global_mean <- plot_combined_a_LER(a_LER_grain_global_mean_clean, "GRAIN")
 a_LER_grain_plot_global_mean
 ```
 
@@ -851,7 +831,7 @@ ggsave(output_path,
 
 ```{r}
 # Generate the combined plot for Grass-Clover
-a_LER_clover_plot_global_mean <- plot_combined_a_LER(a_LER_clover_global_mean_clean, "Grass-Clover")
+a_LER_clover_plot_global_mean <- plot_combined_a_LER(a_LER_clover_global_mean_clean, "GRASS_CLOVER")
 a_LER_clover_plot_global_mean
 ```
 
@@ -881,16 +861,16 @@ ggsave(output_path,
 # GLOBAL MEAN
 ####################################
 combined_a_LER_global_mean <- bind_rows(
-  a_LER_grain_global_mean %>% mutate(Product = "Grain"),
-  a_LER_clover_global_mean %>% mutate(Product = "Grass-Clover")
+  a_LER_grain_global_mean %>% mutate(Product = "GRAIN"),
+  a_LER_clover_global_mean %>% mutate(Product = "GRASS_CLOVER")
 )
 
 ############################################################################################################
 # PV SETUP-SPECIFIC MEAN
 ####################################
 combined_a_LER_pv_sys <- bind_rows(
-  a_LER_grain_pv_sys_mean %>% mutate(Product = "Grain"),
-  a_LER_grain_pv_sys_mean %>% mutate(Product = "Grass-Clover")
+  a_LER_grain_pv_sys_mean %>% mutate(Product = "GRAIN"),
+  a_LER_grain_pv_sys_mean %>% mutate(Product = "GRASS_CLOVER")
 )
 ```
 
@@ -927,63 +907,112 @@ summary_table_filtered_global_mean <- filtered_a_LER_global_mean %>%
 summary_table_filtered_global_mean
 ```
 
+
+##############################################################################################################################
+## ADDING RELATIVE CROP AND ENERGY YIELDS
+##############################################################################################################################
+
+
+
 ```{r}
-  global_means <- combined_a_LER_global_mean %>%
+  global_means <- combined_a_LER_global_mean  |> 
     filter(grepl("OUTSIDE_PV", PV_SETUP_2)) %>%
     group_by(Product) %>%
     summarize(global_mean_dry_weight = mean(mean_dry_weight, na.rm = TRUE), .groups = 'drop')
+
+global_means
 ```
+
 
 
 ```{r}
 add_relative_yield_columns <- function(data, use_global_mean = FALSE) {
   
-  # Calculate global mean if necessary
-  if (use_global_mean) {
-    global_means <- data %>%
-      filter(grepl("_OUTSIDE_PV$", PV_SETUP_2)) %>%
-      group_by(Product) %>%
-      summarise(global_mean_dry_weight = mean(mean_dry_weight, na.rm = TRUE))
-    
-    data <- data %>%
-      left_join(global_means, by = "Product")
-  }
+  # Calculate the global mean yield for each product based on "OUTSIDE_PV" locations
+  global_means <- data %>%
+    filter(grepl("_OUTSIDE_PV$", PV_SETUP_2)) %>%
+    group_by(Product) %>%
+    summarise(global_mean_dry_weight = mean(mean_dry_weight, na.rm = TRUE), .groups = 'drop')
   
+  # Calculate PV system-specific mean yields for each product based on "OUTSIDE_PV" locations
+  pv_system_means <- data %>%
+    filter(grepl("_OUTSIDE_PV$", PV_SETUP_2)) %>%
+    group_by(Product, PV_SETUP_2) %>%
+    summarise(pv_system_mean_dry_weight = mean(mean_dry_weight, na.rm = TRUE), .groups = 'drop')
+  
+  # Join reference yields to data
+  data <- data %>%
+    left_join(global_means, by = "Product") %>%
+    left_join(pv_system_means, by = c("Product", "PV_SETUP_2"))
+  
+  # Calculate relative yields separately for GRAIN and GRASS_CLOVER
   data %>%
     mutate(
-      # Calculate relative crop yield for vertical setups
+      # For GRAIN: Calculate relative crop yield for vertical and south-oriented setups
       relative_crop_yield_vertical = ifelse(
-        PV_SETUP_2 == "VERTICAL_BETWEEN_PV",
-        (mean_dry_weight / ifelse(use_global_mean, global_mean_dry_weight, data$mean_dry_weight[data$PV_SETUP_2 == "VERTICAL_OUTSIDE_PV"])) * 100,
+        Product == "GRAIN" & PV_SETUP_2 == "VERTICAL_BETWEEN_PV",
+        (mean_dry_weight / ifelse(
+          use_global_mean, 
+          global_means$global_mean_dry_weight[global_means$Product == "GRAIN"], 
+          pv_system_means$pv_system_mean_dry_weight[pv_system_means$Product == "GRAIN" & pv_system_means$PV_SETUP_2 == "VERTICAL_OUTSIDE_PV"]
+        )) * 100,
         NA_real_
       ),
-      # Calculate relative crop yield for south-oriented setups
+      
       relative_crop_yield_south_oriented = ifelse(
-        PV_SETUP_2 == "SOUTH-ORIENTED_BETWEEN_PV",
-        (mean_dry_weight / ifelse(use_global_mean, global_mean_dry_weight, data$mean_dry_weight[data$PV_SETUP_2 == "SOUTH-ORIENTED_OUTSIDE_PV"])) * 100,
+        Product == "GRAIN" & PV_SETUP_2 == "SOUTH_ORIENTED_BETWEEN_PV",
+        (mean_dry_weight / ifelse(
+          use_global_mean, 
+          global_means$global_mean_dry_weight[global_means$Product == "GRAIN"], 
+          pv_system_means$pv_system_mean_dry_weight[pv_system_means$Product == "GRAIN" & pv_system_means$PV_SETUP_2 == "SOUTH_ORIENTED_OUTSIDE_PV"]
+        )) * 100,
         NA_real_
       ),
-      # Calculate relative energy yield for vertical setups
+      
+      # For GRASS_CLOVER: Calculate relative crop yield for vertical and south-oriented setups
+      relative_crop_yield_vertical = ifelse(
+        Product == "GRASS_CLOVER" & PV_SETUP_2 == "VERTICAL_BETWEEN_PV",
+        (mean_dry_weight / ifelse(
+          use_global_mean, 
+          global_means$global_mean_dry_weight[global_means$Product == "GRASS_CLOVER"], 
+          pv_system_means$pv_system_mean_dry_weight[pv_system_means$Product == "GRASS_CLOVER" & pv_system_means$PV_SETUP_2 == "VERTICAL_OUTSIDE_PV"]
+        )) * 100,
+        relative_crop_yield_vertical  # Retain already calculated values for GRAIN
+      ),
+      
+      relative_crop_yield_south_oriented = ifelse(
+        Product == "GRASS_CLOVER" & PV_SETUP_2 == "SOUTH_ORIENTED_BETWEEN_PV",
+        (mean_dry_weight / ifelse(
+          use_global_mean, 
+          global_means$global_mean_dry_weight[global_means$Product == "GRASS_CLOVER"], 
+          pv_system_means$pv_system_mean_dry_weight[pv_system_means$Product == "GRASS_CLOVER" & pv_system_means$PV_SETUP_2 == "SOUTH_ORIENTED_OUTSIDE_PV"]
+        )) * 100,
+        relative_crop_yield_south_oriented  # Retain already calculated values for GRAIN
+      ),
+      
+      # Calculate relative energy yield for vertical and south-oriented setups
       relative_energy_yield_vertical = ifelse(
         PV_SETUP_2 == "VERTICAL_BETWEEN_PV",
         (ELECTRICITY_OUTPUT_MWH_HA_YR / data$ELECTRICITY_OUTPUT_MWH_HA_YR[data$PV_SETUP_2 == "REFERENCE"]) * 100,
         NA_real_
       ),
-      # Calculate relative energy yield for south-oriented setups
+      
       relative_energy_yield_south_oriented = ifelse(
-        PV_SETUP_2 == "SOUTH-ORIENTED_BETWEEN_PV",
+        PV_SETUP_2 == "SOUTH_ORIENTED_BETWEEN_PV",
         (ELECTRICITY_OUTPUT_MWH_HA_YR / data$ELECTRICITY_OUTPUT_MWH_HA_YR[data$PV_SETUP_2 == "REFERENCE"]) * 100,
         NA_real_
       ),
+      
       # Calculate land loss percentages for vertical setups
       land_loss_vertical = ifelse(
         PV_SETUP_2 == "VERTICAL_BETWEEN_PV",
         (LL_HA / (TOTAL_AREA_OCCUPIED_M2 / 10000)) * 100,
         NA_real_
       ),
+      
       # Calculate land loss percentages for south-oriented setups
       land_loss_south_oriented = ifelse(
-        PV_SETUP_2 == "SOUTH-ORIENTED_BETWEEN_PV",
+        PV_SETUP_2 == "SOUTH_ORIENTED_BETWEEN_PV",
         (LL_HA / (TOTAL_AREA_OCCUPIED_M2 / 10000)) * 100,
         NA_real_
       )
@@ -992,38 +1021,35 @@ add_relative_yield_columns <- function(data, use_global_mean = FALSE) {
 
 ```
 
-```{r}
-# Apply the function to the combined_a_LER dataset
 
+Apply the function to the combined_a_LER dataset
+
+```{r}
 ############################################################################################################
 # GLOBAL MEAN
 ####################################
-combined_a_LER_relative_yield_global_mean <- add_relative_yield_columns(data = combined_a_LER_global_mean,
-                                                                        use_global_mean = TRUE) |> 
-  rename_pv_setup() 
+# Calculate relative yields using the global mean as the reference
+combined_a_LER_relative_yield_global_mean <- add_relative_yield_columns(
+  data = combined_a_LER_global_mean,
+  use_global_mean = TRUE
+)
 
-# View the updated combined_a_LER dataset
+# Select and view the relevant columns for the global mean calculation
 combined_a_LER_relative_yields_global_mean_table <- combined_a_LER_relative_yield_global_mean %>%
   select(PV_SETUP_2, Product, a_LER, mean_dry_weight, ELECTRICITY_OUTPUT_MWH_HA_YR, 
          relative_crop_yield_vertical, relative_crop_yield_south_oriented, 
          relative_energy_yield_vertical, relative_energy_yield_south_oriented, 
          land_loss_vertical, land_loss_south_oriented)
 
+# Display the global mean table
+combined_a_LER_relative_yields_global_mean_table
+
 
 ############################################################################################################
 # PV SETUP-SPECIFIC MEAN
 ####################################
-combined_a_LER_relative_yield_pv_sys <- add_relative_yield_columns(combined_a_LER_pv_sys,
-                                                                   use_global_mean = TRUE) |> 
-  rename_pv_setup() 
+# Calculate relative yields using PV setup-specific means as the reference
 
-
-# View the updated combined_a_LER dataset
-combined_a_LER_relative_yields_pv_sys_table <- combined_a_LER_relative_yield_pv_sys %>%
-  select(PV_SETUP_2, Product, a_LER, mean_dry_weight, ELECTRICITY_OUTPUT_MWH_HA_YR, 
-         relative_crop_yield_vertical, relative_crop_yield_south_oriented, 
-         relative_energy_yield_vertical, relative_energy_yield_south_oriented, 
-         land_loss_vertical, land_loss_south_oriented)
 ```
 
 ```{r}
@@ -1040,19 +1066,19 @@ create_clean_product_table <- function(data, product_name) {
       # Combine relative crop yields into one column
       relative_crop_yield = case_when(
         grepl("VERTICAL", PV_SETUP_2) ~ relative_crop_yield_vertical,
-        grepl("SOUTH-ORIENTED", PV_SETUP_2) ~ relative_crop_yield_south_oriented,
+        grepl("SOUTH_ORIENTED", PV_SETUP_2) ~ relative_crop_yield_south_oriented,
         TRUE ~ NA_real_
       ),
       # Combine relative energy yields into one column
       relative_energy_yield = case_when(
         grepl("VERTICAL", PV_SETUP_2) ~ relative_energy_yield_vertical,
-        grepl("SOUTH-ORIENTED", PV_SETUP_2) ~ relative_energy_yield_south_oriented,
+        grepl("SOUTH_ORIENTED", PV_SETUP_2) ~ relative_energy_yield_south_oriented,
         TRUE ~ NA_real_
       ),
       # Combine land loss into one column
       land_loss = case_when(
         grepl("VERTICAL", PV_SETUP_2) ~ land_loss_vertical,
-        grepl("SOUTH-ORIENTED", PV_SETUP_2) ~ land_loss_south_oriented,
+        grepl("SOUTH_ORIENTED", PV_SETUP_2) ~ land_loss_south_oriented,
         TRUE ~ NA_real_
       ),
       # Replace NA with space character and format numbers to 3 decimal places
@@ -1081,8 +1107,8 @@ create_clean_product_table <- function(data, product_name) {
 
 ```{r}
 # Create tables for Grass-Clover and Wheat (Grain)
-clean_wheat_grain_table_global_mean <- create_clean_product_table(combined_a_LER_relative_yields_global_mean_table, "Grain")
-clean_grass_clover_table_global_mean <- create_clean_product_table(combined_a_LER_relative_yields_global_mean_table, "Grass-Clover")
+clean_wheat_grain_table_global_mean <- create_clean_product_table(combined_a_LER_relative_yields_global_mean_table, "GRAIN")
+clean_grass_clover_table_global_mean <- create_clean_product_table(combined_a_LER_relative_yields_global_mean_table, "GRASS_CLOVER")
 ```
 
 ```{r}
@@ -1109,14 +1135,14 @@ combined_a_LER_relative_yields_for_table_global_mean <- combined_a_LER_relative_
     land_loss = ifelse(!is.na(land_loss_vertical), land_loss_vertical, land_loss_south_oriented)
   )
 
-# Filter and prepare data for "Grain"
+# Filter and prepare data for "GRAIN"
 grain_data_global_mean <- combined_a_LER_relative_yields_for_table_global_mean %>%
-  filter(Product == "Grain", 
+  filter(Product == "GRAIN", 
          !grepl("_OUTSIDE_PV", PV_SETUP_2)) %>%  # Exclude "_OUTSIDE_PV" rows
     mutate(
       PV_SETUP_2 = case_when(
-        PV_SETUP_2 == "SOUTH-ORIENTED" ~ "Tilted south-oriented",
-        PV_SETUP_2 == "VERTICAL" ~ "Vertical",
+        PV_SETUP_2 == "SOUTH_ORIENTED_BETWEEN_PV" ~ "Tilted south-oriented",
+        PV_SETUP_2 == "VERTICAL_BETWEEN_PV" ~ "Vertical",
         PV_SETUP_2 == "REFERENCE" ~ "REFERENCE",  # Keep REFERENCE unchanged
         TRUE ~ PV_SETUP_2  # Leave other values unchanged if any
       )
@@ -1132,14 +1158,14 @@ grain_data_global_mean <- combined_a_LER_relative_yields_for_table_global_mean %
   )
 
 
-# Filter and prepare data for "Grass-Clover"
+# Filter and prepare data for "GRASS_CLOVER"
 clover_data_global_mean <- combined_a_LER_relative_yields_for_table_global_mean %>%
-  filter(Product == "Grass-Clover", 
+  filter(Product == "GRASS_CLOVER", 
          !grepl("_OUTSIDE_PV", PV_SETUP_2)) %>%  # Exclude "_OUTSIDE_PV" rows
   mutate(
       PV_SETUP_2 = case_when(
-        PV_SETUP_2 == "SOUTH-ORIENTED" ~ "Tilted south-oriented",
-        PV_SETUP_2 == "VERTICAL" ~ "Vertical",
+        PV_SETUP_2 == "SOUTH_ORIENTED_BETWEEN_PV" ~ "Tilted south-oriented",
+        PV_SETUP_2 == "VERTICAL_BETWEEN_PV" ~ "Vertical",
         PV_SETUP_2 == "REFERENCE" ~ "REFERENCE",  # Keep REFERENCE unchanged
         TRUE ~ PV_SETUP_2  # Leave other values unchanged if any
       )
@@ -1288,6 +1314,8 @@ clover_table_output_path <- file.path(folder_path, clover_table_file_name)
 gtsave(clover_table_global_mean, clover_table_output_path)
 ```
 
+
+
 ####################################################################################################################
 COMBINED TABLE
 ##########################################################
@@ -1427,6 +1455,24 @@ combined_LER_table_modified
 
 ```
 
+SAVE MANUALLY BY EXPORTING PLOT FROM PLOT PANE WINDOW
+
+```{r}
+# Customize the `gt` table with specific width and font adjustments
+combined_LER_table_modified_2 <- combined_LER_table_modified %>%
+  tab_options(
+    table.width = pct(100),      # Set width to 100% of output area
+    table.font.size = px(12)     # Adjust font size as needed
+  )
+
+# Define the folder path where you want to save the images
+folder_path <- "C:/Users/au759124/OneDrive - Aarhus universitet/Documents/V4F_agrivoltaics/FIGURES/LER"
+
+# Save the combined_LER_table_modified
+table_file_name <- "combined_LER_table_modified_2.png"
+output_path <- file.path(folder_path, table_file_name)
+gtsave(combined_LER_table_modified_2, output_path)
+```
 
 AN EDITABLE EXCEL VERSION
 
